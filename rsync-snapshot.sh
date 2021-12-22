@@ -21,14 +21,19 @@ fi
 # "my_snapshots" folder (current directory script was run in)
 CURRENT_DIR=$(dirname $0)
 
-# snapshot parent path
+# snapshotS path
 SNAPSHOTS_FOLDER=$CURRENT_DIR/snapshots
 if [[ ! -d $SNAPSHOTS_FOLDER ]]; then
 	echo "Creating $SNAPSHOTS_FOLDER"
 	mkdir $SNAPSHOTS_FOLDER
 fi
 
-DEFAULT_EXCLUDE_TEMPLATE="/dev/*
+# exclude file
+MASTER_EXCLUDE_FILE=$CURRENT_DIR/exclude.list
+## exclude.list not found, probably first time running script
+if [[ ! -f $MASTER_EXCLUDE_FILE ]]; then
+	# create template exclude file
+	echo "/dev/*
 /proc/*
 /sys/*
 /run/*
@@ -44,12 +49,8 @@ DEFAULT_EXCLUDE_TEMPLATE="/dev/*
 /var/cache/pacman/pkg/*
 
 /home/*/.cache/*
-/home/*/.SiriKali/*"
+/home/*/.SiriKali/*" > $MASTER_EXCLUDE_FILE
 
-# exclude file
-MASTER_EXCLUDE_FILE=$CURRENT_DIR/exclude.list
-if [[ ! -f $MASTER_EXCLUDE_FILE ]]; then
-	echo "$DEFAULT_EXCLUDE_TEMPLATE" > $MASTER_EXCLUDE_FILE
 	echo "$MASTER_EXCLUDE_FILE not found."
 	echo "Creating '$MASTER_EXCLUDE_FILE' with a default exclude template,"
 	echo "Please review/modify it and run script again"
@@ -69,7 +70,6 @@ mkdir $SNAPSHOT_LOCATION
 
 # snapshot log
 SNAPSHOT_LOG=$SNAPSHOT_PATH/rsync.log
-
 
 # copy exclude file to snapshot folder as it may change over time (for records)
 EXCLUDE_FILE=$SNAPSHOT_PATH/exclude.list
