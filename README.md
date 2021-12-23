@@ -3,7 +3,7 @@
 - **pkglist.sh**
   - List pacman packages by size
 - **rsync-backup.sh**
-  - Take system backup using rsync
+  - Take system backups using rsync
 - **rsync-snapshot.sh**
   - Take system snapshots using rsync
 - **android-backup.sh**
