@@ -65,7 +65,11 @@ OPT="-aAXH -vh" # archive, ACLs, xattrs, hard links, verbose, human sizes
 SRC="/"
 EXCLUDE="--exclude-from=$EXCLUDE_FILE"
 DELETE="--delete --delete-excluded"
+LOG="--log-file=$LOG_FILE"
+
+echo "Started backup"
+
 ## rsync command
-rsync $OPT $DELETE $EXCLUDE $SRC $BACKUP_PATH 2>&1 | tee $LOG_FILE
+rsync $OPT $DELETE $EXCLUDE $LOG $SRC $BACKUP_PATH --info=progress2
 
 echo "Successfully created backup."
