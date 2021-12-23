@@ -81,6 +81,16 @@ SCRIPT_FILE=$SNAPSHOT_PATH/script.sh
 cp "$0" "$SCRIPT_FILE"
 
 
+function interruptHandler() {
+	echo "Operation canceled, deleting partial snapshot..."
+	rm -rf "$SNAPSHOT_PATH"
+	echo "Partial snapshot deleted, exiting."
+	exit
+}
+trap interruptHandler SIGINT
+
+
+## rsync paramaters
 OPT="-aAXH -vh" # archive, ACLs, xattrs, hard links, verbose, human sizes
 # if first snapshot dosent exist dont include --link-dest
 [[ -d $SNAPSHOT_LAST ]] && LINK="--link-dest=$(realpath $SNAPSHOT_LAST)/system/"
