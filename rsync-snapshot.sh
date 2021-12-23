@@ -51,17 +51,12 @@ if [[ ! -f $MASTER_EXCLUDE_FILE ]]; then
 /var/run/*
 /var/lock/*
 /var/tmp/*
-/var/lib/docker/*
-/var/lib/libvirt/images/pool/*
-/var/cache/pacman/pkg/*
 
-/home/*/.cache/*
-/home/*/.SiriKali/*" > $MASTER_EXCLUDE_FILE
+/home/*/.cache/*" > $MASTER_EXCLUDE_FILE
 
-	echo "$MASTER_EXCLUDE_FILE not found."
 	echo "Creating '$MASTER_EXCLUDE_FILE' with a default exclude template,"
 	echo "Please review/modify it and run script again"
-	exit 0
+	exit
 fi
 
 # snapshot path
