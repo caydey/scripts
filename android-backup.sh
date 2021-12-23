@@ -45,8 +45,9 @@ function create_archive() {
 	## create exclude paramaters
 	EXCLUDES=""
 	for line in $(cat $EXCLUDE_FILE); do
-		if [[ $line =~ ^$DIRECTORY.*$ ]]; then
-			if [[ "$DIRNAME" == "/" ]]; then	## dirname of /my/path is /my but dirname of /path is /
+		if [[ $line =~ ^$DIRECTORY.*$ ]]; then # path matches path inside exclude file
+			# /data/data/*/cache/* -> data/*/cache/*
+			if [[ "$DIRNAME" == "/" ]]; then ## dirname of /my/path is /my but dirname of /path is /
 				EXCLUDE="${line:${#DIRNAME}}"
 			else
 				EXCLUDE="${line:${#DIRNAME}+1}"
@@ -60,7 +61,7 @@ function create_archive() {
 	fi
 
 
-	## restore old archive if Ctrl-c
+	## restore old archive if Ctrl-c then exit
 	trap "rm $OUTPUT; [[ -f $OUTPUT.bak ]] && mv $OUTPUT.bak $OUTPUT; exit" SIGINT
 
 	TABS="										"
