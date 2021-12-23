@@ -84,7 +84,7 @@ cp "$0" "$SCRIPT_FILE"
 OPT="-aAXH -vh" # archive, ACLs, xattrs, hard links, verbose, human sizes
 # if first snapshot dosent exist dont include --link-dest
 [[ -d $SNAPSHOT_LAST ]] && LINK="--link-dest=$(realpath $SNAPSHOT_LAST)/system/"
-SRC="mydata"
+SRC="/" # root filesystem is source of snapshot
 EXCLUDE="--exclude-from=$EXCLUDE_FILE"
 
 ## rsync command
