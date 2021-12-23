@@ -18,18 +18,25 @@ if [ $UID -ne 0 ]; then
 	exit 1
 fi
 
-# "my_snapshots" folder (current directory script was run in)
-CURRENT_DIR=$(dirname $0)
+## save path
+SAVE_PATH=$1
+## no param assume current directory
+if [[ -z $SAVE_PATH ]]; then
+	SAVE_PATH="."
+elif [[ ! -d $SAVE_PATH ]]; then
+	echo "directory not found"
+	exit 1
+fi
 
-# snapshotS path
-SNAPSHOTS_FOLDER=$CURRENT_DIR/snapshots
+# snapshot_s_ path
+SNAPSHOTS_FOLDER=$SAVE_PATH/snapshots
 if [[ ! -d $SNAPSHOTS_FOLDER ]]; then
 	echo "Creating $SNAPSHOTS_FOLDER"
 	mkdir $SNAPSHOTS_FOLDER
 fi
 
 # exclude file
-MASTER_EXCLUDE_FILE=$CURRENT_DIR/exclude.list
+MASTER_EXCLUDE_FILE=$SAVE_PATH/exclude.list
 ## exclude.list not found, probably first time running script
 if [[ ! -f $MASTER_EXCLUDE_FILE ]]; then
 	# create template exclude file
