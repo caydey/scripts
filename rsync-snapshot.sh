@@ -91,18 +91,21 @@ trap interruptHandler SIGINT
 
 
 ## rsync paramaters
-OPT="-aAXH -vh" # archive, ACLs, xattrs, hard links, verbose, human sizes
+OPT="-aAXH" # archive, ACLs, xattrs, hard links
 # if first snapshot dosent exist dont include --link-dest
 [[ -d $SNAPSHOT_LAST ]] && LINK="--link-dest=$(realpath $SNAPSHOT_LAST)/system/"
 SRC="/" # root filesystem is source of snapshot
 EXCLUDE="--exclude-from=$EXCLUDE_FILE"
+LOG="--log-file=$SNAPSHOT_LOG"
 
+echo "Started creating snapshot"
 ## rsync command
 # take snapshot with rsync saving stdout and stderr to $SNAPSHOT_LOG
-rsync $OPT $LINK $EXCLUDE $SRC $SNAPSHOT_LOCATION 2>&1 | tee $SNAPSHOT_LOG
+rsync $OPT $LINK $EXCLUDE $LOG $SRC $SNAPSHOT_LOCATION --info=progress2
+
+echo "Successfully created snapshot."
+
 
 # update latest snapshot pointer
 rm -f $SNAPSHOT_LAST
 ln -s $(basename $SNAPSHOT_PATH) $SNAPSHOT_LAST
-
-echo "Successfully created snapshot."
