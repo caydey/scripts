@@ -70,6 +70,9 @@ LOG="--log-file=$LOG_FILE"
 echo "Started backup"
 
 ## rsync command
-rsync $OPT $DELETE $EXCLUDE $LOG $SRC $BACKUP_PATH --info=progress2
+rsync $OPT $DELETE $EXCLUDE $LOG $SRC $BACKUP_PATH
+
+echo "syncing drive..."
+sync $BACKUP_PATH
 
 echo "Successfully created backup."
