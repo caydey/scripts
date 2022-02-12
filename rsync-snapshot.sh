@@ -101,7 +101,7 @@ LOG="--log-file=$SNAPSHOT_LOG"
 echo "Started creating snapshot"
 ## rsync command
 # take snapshot with rsync saving stdout and stderr to $SNAPSHOT_LOG
-rsync $OPT $LINK $EXCLUDE $LOG $SRC $SNAPSHOT_LOCATION --info=progress2
+rsync $OPT $LINK $EXCLUDE $LOG $SRC $SNAPSHOT_LOCATION -vh
 
 echo "Successfully created snapshot."
 
@@ -109,3 +109,7 @@ echo "Successfully created snapshot."
 # update latest snapshot pointer
 rm -f $SNAPSHOT_LAST
 ln -s $(basename $SNAPSHOT_PATH) $SNAPSHOT_LAST
+
+
+echo "syncing drive..."
+sync $SNAPSHOT_LOCATION

@@ -61,7 +61,7 @@ LOG_PATH=$SAVE_PATH/logs
 LOG_FILE=$LOG_PATH/$(date +'%y%m%d-%H%M%S').log
 
 ## rsync paramaters
-OPT="-aAXH -vh" # archive, ACLs, xattrs, hard links, verbose, human sizes
+OPT="-aAXH" # archive, ACLs, xattrs, hard links, verbose, human sizes
 SRC="/"
 EXCLUDE="--exclude-from=$EXCLUDE_FILE"
 DELETE="--delete --delete-excluded"
@@ -70,6 +70,10 @@ LOG="--log-file=$LOG_FILE"
 echo "Started backup"
 
 ## rsync command
-rsync $OPT $DELETE $EXCLUDE $LOG $SRC $BACKUP_PATH --info=progress2
+rsync $OPT $DELETE $EXCLUDE $LOG $SRC $BACKUP_PATH -vh
 
 echo "Successfully created backup."
+
+echo "syncing drive..."
+sync $BACKUP_PATH
+
