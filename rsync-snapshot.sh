@@ -12,19 +12,27 @@
 #    |  `- script.sh            script used for this snapshot
 #    `- last -> YYMMDD-hhmmss/  links to last snapshot
 
-# check if running as root
-if [ $UID -ne 0 ]; then
+# parse args
+SAVE_PATH=$1
+FORCE_ROOT=true
+if [[ "$1" == "--no-root" ]]; then
+	SAVE_PATH="."
+	FORCE_ROOT=false
+elif [[ "$2" == "--no-root" ]]; then
+	FORCE_ROOT=false
+fi
+
+## check if root
+if [ "$FORCE_ROOT" = true ] && [ $UID -ne 0 ]; then
 	echo "run as root"
 	exit 1
 fi
 
-## save path
-SAVE_PATH=$1
 ## no param assume current directory
-if [[ -z $SAVE_PATH ]]; then
+if [[ -z "$SAVE_PATH" ]]; then
 	SAVE_PATH="."
-elif [[ ! -d $SAVE_PATH ]]; then
-	echo "directory not found"
+elif [[ ! -d "$SAVE_PATH" ]]; then
+	echo "directory not found '$SAVE_PATH'"
 	exit 1
 fi
 
