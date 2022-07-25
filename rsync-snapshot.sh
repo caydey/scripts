@@ -16,7 +16,7 @@
 SAVE_PATH=$1
 FORCE_ROOT=true
 if [[ "$1" == "--no-root" ]]; then
-	SAVE_PATH="."
+	unset SAVE_PATH
 	FORCE_ROOT=false
 elif [[ "$2" == "--no-root" ]]; then
 	FORCE_ROOT=false
@@ -24,7 +24,7 @@ fi
 
 ## check if root
 if [ "$FORCE_ROOT" = true ] && [ $UID -ne 0 ]; then
-	echo "run as root"
+	echo "run as root or use the --no-root argument"
 	exit 1
 fi
 
