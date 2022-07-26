@@ -1,5 +1,7 @@
-# Shell Scripts
-## A collection of useful shell scripts
+# Scripts
+
+## A collection of useful scripts
+
 - **pkglist.sh**
   - List pacman packages by size
 - **rsync-backup.sh**
