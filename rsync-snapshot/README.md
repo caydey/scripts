@@ -5,10 +5,11 @@ required sudo to run by default, disable with the `--no-root` paramater if you a
 ## Usage
 
 - copy rsync-snapshot.sh to a folder that you want your snapshots to be saved in
-- cd into the folder and run `./rsync-snapshot.sh --no-root` to init files
+- cd into the folder and run `./rsync-snapshot.sh create --no-root` to init files
 - a folder named `snapshots` will be created along with `exclude.list` and `include.list` files
 - edit `exclude.list` and `include.list` respectivly with the files you want include/exclude in the snapshot
-- finally run `./rsync-snapshot.sh` to take your first snapshot
+- finally run `./rsync-snapshot.sh create` to take your first snapshot
+- you can also run `./rsync-snapshot.sh help` afterwards to show other snapshot options
 
 ## Generated folder structure
 
