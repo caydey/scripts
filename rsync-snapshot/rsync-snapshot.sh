@@ -12,7 +12,7 @@
 #    |  `- script.sh            script used for this snapshot
 #    `- last -> YYMMDD-hhmmss/  links to last snapshot
 
-function snapshotLogs() { # SAVE_PATH
+function snapshotList() { # SAVE_PATH
 	SAVE_PATH=$1
 	totalSizeBytes=0
 	# header
@@ -176,8 +176,8 @@ usage: $0 <command> [snapshot location] [--no-root]
         by default will require the user to be root, to bypass this pass the
 				--no-root paramter at the end of the comand
 
-  View snapshot logs:
-    $0 logs [snapshot location]
+  View snapshots:
+    $0 list [snapshot location]
         View past snapshot details, includes size, date and total snapshot size
         footprint
 
@@ -210,8 +210,8 @@ case $1 in
 "create" | "c")
 	snapshotCreate "$SAVE_PATH" "$FORCE_ROOT"
 	;;
-"logs" | "log" | "l")
-	snapshotLogs "$SAVE_PATH"
+"list" | "l")
+	snapshotList "$SAVE_PATH"
 	;;
 "help" | "h" | *)
 	snapshotHelp
