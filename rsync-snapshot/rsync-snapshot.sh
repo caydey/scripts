@@ -13,14 +13,6 @@
 #    `- last -> YYMMDD-hhmmss/  links to last snapshot
 
 
-function prompt_yn() {
-  read -e -p "$1 [Y/n]: " yn
-  if [[ "$yn" == "" ]] || [[ "$yn" == [Yy]* ]]; then
-  	return 0
-  fi
-  return 1
-}
-
 function snapshotList() { # SAVE_PATH
 	SAVE_PATH=$1
 	totalSizeBytes=0
