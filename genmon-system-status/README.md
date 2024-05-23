@@ -2,7 +2,7 @@
 
 status script for xfce4-genmon-plugin
 
-adjust source code variables for your system, then compile and refrence in the genmon widgen
+adjust source code variables for your system, then compile and reference in the genmon widget
 
 ## advanced setup with click to refresh
 
