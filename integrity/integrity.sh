@@ -25,7 +25,7 @@ function generate() {
   # display info about directory
   fileCount=$(find . -type f -not -wholename "$INTEGRITY_FILE" | wc -l)
   totalSize=$(du -sh . | awk '{print $1}')
-  echo "generating hashes for $fileCount files ($totalSize total)"
+  echo "generating hashes for $fileCount files ($totalSize)"
 
   function make_hash() {
     printf '.' # "loading" bar
