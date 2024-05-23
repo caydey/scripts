@@ -12,12 +12,21 @@
 #    |  `- script.sh            script used for this snapshot
 #    `- last -> YYMMDD-hhmmss/  links to last snapshot
 
+
+function prompt_yn() {
+  read -e -p "$1 [Y/n]: " yn
+  if [[ "$yn" == "" ]] || [[ "$yn" == [Yy]* ]]; then
+  	return 0
+  fi
+  return 1
+}
+
 function snapshotList() { # SAVE_PATH
 	SAVE_PATH=$1
 	totalSizeBytes=0
 	# header
-	echo "   # │ Date                     │    Size │  Actual"
-	echo "─────┼──────────────────────────┼─────────┼────────"
+	echo "   # │ Date                     │      Size │    Actual"
+	echo "─────┼──────────────────────────┼───────────┼──────────"
 	i=0
 	for SNAP_LOG in $(ls "$SAVE_PATH"/snapshots/??????-??????/rsync.log); do
 		D=$(basename $(dirname "$SNAP_LOG")) # DATE
@@ -34,35 +43,29 @@ function snapshotList() { # SAVE_PATH
 		# <DATE> |
 		printf " $FORMATTED │"
 		# <SIZE> |
-		numfmt --zero-terminated --from=iec --to=iec --format="%8.1f │" "$SIZE"
+		numfmt --zero-terminated --from=si --to=iec-i --round=nearest --suffix="B" --format="%10.1f │" "$SIZE"
 		# <ACTUAL SIZE> |
-		numfmt --zero-terminated --from=iec --to=iec --format="%8.1f" "$ACTUAL_SIZE"
+		numfmt --zero-terminated --from=si --to=iec-i --round=nearest --suffix="B" --format="%10.1f" "$ACTUAL_SIZE"
 		# newline
 		echo
 		((i++))
 
 		# count total snapshots size
-		snapshotSizeBytes=$(numfmt --from=iec "$ACTUAL_SIZE")
+		snapshotSizeBytes=$(numfmt --from=si "$ACTUAL_SIZE")
 		totalSizeBytes=$(($totalSizeBytes + $snapshotSizeBytes))
 	done
 
-	totalSizeHuman=$(numfmt --to=iec --format=%.2f "$totalSizeBytes")
-	echo "Total disk space used: $totalSizeHuman"
+	totalSizeHuman=$(numfmt --to=iec-i --round=nearest --suffix="B" --format=%.2f "$totalSizeBytes")
+	printf "%55s\n" "Total disk space used: $totalSizeHuman"
 }
 
-function snapshotCreate() { # SAVE_PATH, FORCE_ROOT
+function snapshotCreate() { # SAVE_PATH
 	SAVE_PATH=$1
-	FORCE_ROOT=$2
-	## check if root
-	if [ "$FORCE_ROOT" = true ] && [ $UID -ne 0 ]; then
-		echo "run as root or use the --no-root argument"
-		exit 1
-	fi
 
 	# snapshot_s_ path
 	SNAPSHOTS_FOLDER=$SAVE_PATH/snapshots
 	if [[ ! -d $SNAPSHOTS_FOLDER ]]; then
-		echo "Creating $SNAPSHOTS_FOLDER"
+		echo "Creating $SNAPSHOTS_FOLDER folder"
 		mkdir "$SNAPSHOTS_FOLDER"
 	fi
 
@@ -174,46 +177,124 @@ usage: $0 <command> [snapshot location] [--no-root]
         Creates snapshot, pass snapshot location as paramater or leave empty to
         default to current directory
         by default will require the user to be root, to bypass this pass the
-				--no-root paramter at the end of the comand
+        --no-root paramter at the end of the comand
 
-  View snapshots:
+  List snapshots:
     $0 list [snapshot location]
-        View past snapshot details, includes size, date and total snapshot size
+        List past snapshot details, includes size, date and total snapshot size
         footprint
+	
+  Delete snapshot:
+    $0 delete [snapshot location] [snapshot number] [--no-root]
+        Delete snapshot by number, find snapshot number with the list command
+        Negative numbers are also accepted
 
-  Command help:
+  Help:
     $0 help
-        Show this menu
+        Display this menu
 
 EOF
 }
 
-# parse args
-SAVE_PATH=$2
-FORCE_ROOT=true
-if [[ "$2" == "--no-root" ]]; then
-	unset SAVE_PATH
-	FORCE_ROOT=false
-elif [[ "$3" == "--no-root" ]]; then
-	FORCE_ROOT=false
-fi
+function snapshotDelete() { # SAVE_PATH, SNAPSHOT_NUM
+	SAVE_PATH=$1
+	SNAPSHOT_NUM=$2
 
-## no param assume current directory
-if [[ -z "$SAVE_PATH" ]]; then
-	SAVE_PATH="."
-elif [[ ! -d "$SAVE_PATH" ]]; then
-	echo "directory not found '$SAVE_PATH'"
-	exit 1
-fi
+	# calculate snapshot number if number is negative
+	SNAP_COUNT=$(ls -1d "$SAVE_PATH"/snapshots/??????-?????? | wc -l)
+	if [ $SNAPSHOT_NUM -lt 0 ]; then
+		SNAPSHOT_NUM=$(($SNAP_COUNT + $SNAPSHOT_NUM - 1))
+	fi
 
-case $1 in
+	# find snapshot number is pointing to
+	i=0
+	for SNAP in $(ls -1d "$SAVE_PATH"/snapshots/??????-??????); do
+		if [ $i -eq $SNAPSHOT_NUM ]; then
+			DELETE_SNAPSHOT=$SNAP
+			break
+		fi
+		((i++))
+	done
+
+	# number does not refrence any snapshot
+	if [ -z $DELETE_SNAPSHOT ]; then
+		echo "Snapshot not found, use the list command show snapshots"
+		exit 1
+	fi
+
+	# user confirmation
+	read -e -p "Are you sure you want to delete snapshot $DELETE_SNAPSHOT [y/N]: " yn
+  [[ "$yn" == [Yy]* ]] || exit 1
+
+	echo "Deleting snapshot..."
+	if rm -rf "$DELETE_SNAPSHOT"; then
+		echo "Snapshot deleted"
+	else
+		echo "Failed to delete snapshot"
+		exit 1
+	fi
+
+	# update latest snapshot pointer
+	if [ $SNAP_COUNT -gt 1 ]; then # check that all snapshots arent deleted
+		LAST_SNAPSHOT=$(ls -1d "$SAVE_PATH"/snapshots/??????-?????? | tail -n1)
+		unlink "$SAVE_PATH"/snapshots/last
+		ln -sf "$(basename "$LAST_SNAPSHOT")" "$SAVE_PATH"/snapshots/last
+	fi
+}
+
+# set command to first argument passed
+COMMAND=$1
+[[ $# -gt 0 ]] && shift
+
+# parse command arguments
+FORCE_ROOT=true # default to true
+NUM_ARG=-1      # default to -1
+PATH_ARG="."    # default to '.'
+while [[ $# -gt 0 ]]; do
+	case $1 in
+	--no-root)
+		FORCE_ROOT=false
+		shift
+		;;
+	*)
+		if [[ "$1" =~ ^\-?[0-9]+$ ]]; then
+			NUM_ARG=$1
+		else
+			PATH_ARG=$1
+		fi
+		shift
+		;;
+	esac
+done
+
+function checkIfRoot() {
+	## ignore check if --no-root argument passed
+	[ "$FORCE_ROOT" == false ] && return
+
+	## check if root
+	if [ "$FORCE_ROOT" = true ] && [ $UID -ne 0 ]; then
+		echo "run as root or use the --no-root argument"
+		exit 1
+	fi
+}
+
+case $COMMAND in
 "create" | "c")
-	snapshotCreate "$SAVE_PATH" "$FORCE_ROOT"
+	checkIfRoot
+	snapshotCreate "$PATH_ARG"
 	;;
 "list" | "l")
-	snapshotList "$SAVE_PATH"
+	snapshotList "$PATH_ARG"
 	;;
-"help" | "h" | *)
+"delete" | "d")
+	checkIfRoot
+	snapshotDelete "$PATH_ARG" "$NUM_ARG"
+	;;
+"help" | "h" | "")
+	snapshotHelp
+	;;
+*)
+	echo "Unknown command \"$COMMAND\""
 	snapshotHelp
 	;;
 esac
