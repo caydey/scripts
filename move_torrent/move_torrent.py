@@ -147,7 +147,7 @@ def convert_show_title(torrent_show_file):
 
     show_season = groups[1]
     show_episode = groups[2]
-    show_season_episode = f'S{show_season.zfill(2)}E{show_episode.zfill(2)}'
+    show_season_episode = 'S'+show_season.zfill(2)+'E'+show_episode.zfill(2)
     extension = os.path.splitext(torrent_show_file)[1]
 
     response = requests.get(
@@ -166,7 +166,7 @@ def convert_show_title(torrent_show_file):
     api_show_id = api_json['id']  # used in next api call to get episode name
 
     response = requests.get(
-        f'https://api.tvmaze.com/shows/{api_show_id}/episodebynumber',
+        'https://api.tvmaze.com/shows/'+str(api_show_id)+'/episodebynumber',
         params={
             'season': show_season,
             'number': show_episode
@@ -180,7 +180,7 @@ def convert_show_title(torrent_show_file):
     episode_name = api_json['name']
     episode_name = episode_name.replace('/', '-')  # illegal filename chars
 
-    new_filename = f'{show_name} {show_season_episode} - {episode_name}{extension}'
+    new_filename = show_name+' '+show_season_episode+' - '+episode_name+extension
     return new_filename, show_name
 
 
@@ -218,7 +218,7 @@ def convert_movie_title(torrent_movie_file):
     year = groups[1]
     extension = os.path.splitext(torrent_movie_file)[1]
 
-    converted_file = f'{title} ({year}){extension}'
+    converted_file = title + ' ('+year+')'+extension
 
     return converted_file
 
@@ -269,7 +269,7 @@ def get_torrent_type(torrent_path):
 
 def move_file(src, dest):
     if DRY:
-        print(f'ln "{src}" "{dest}"')
+        print('ln "'+src+'" "'+dest+'"')
     else:
         if os.path.exists(dest):
             print(dest+" already exists, not moving")
