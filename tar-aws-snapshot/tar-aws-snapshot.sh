@@ -78,18 +78,21 @@ function displayBucketInfo() {
     return
   fi
 
-  local SNAPSHOT_COUNT=$(echo "$BUCKET_FILE_LIST" | jq -r "[.Contents[]? | select(.Key != \"$SNAR_FILENAME.gpg\")] | length")
+  local BUCKET_FILE_LIST_SNAPSHOT_ONLY=$(echo "$BUCKET_FILE_LIST" | jq -r '[.Contents[]? | select(.Key | test("^[0-9]+-[0-9]+.[0-9]+.tar.[a-z]+.gpg"))]')
+
+  local SNAPSHOT_COUNT=$(echo "$BUCKET_FILE_LIST_SNAPSHOT_ONLY" | jq -r 'length')
 
   if [ "$SNAPSHOT_COUNT" == "0" ]; then
     echo "First Snapshot"
   else
     local TOTAL_BUCKET_SIZE=$(echo "$BUCKET_FILE_LIST" | jq -r '[.Contents[]?.Size] | add' | numfmt --to=iec)
-    local LAST_SNAPSHOT_SIZE=$(echo "$BUCKET_FILE_LIST" | jq -r "[.Contents[]?] | max_by(.LastModified) | .Size" | numfmt --to=iec)
-    local LAST_SNAPSHOT_MODIFIED_RAW=$(echo "$BUCKET_FILE_LIST" | jq -r "[.Contents[]? | select(.Key != \"$SNAR_FILENAME.gpg\")] | max_by(.LastModified) | .LastModified")
+    local LAST_SNAPSHOT_SIZE=$(echo "$BUCKET_FILE_LIST_SNAPSHOT_ONLY" | jq -r "max_by(.LastModified) | .Size" | numfmt --to=iec)
+    local LAST_SNAPSHOT_MODIFIED_RAW=$(echo "$BUCKET_FILE_LIST_SNAPSHOT_ONLY" | jq -r "max_by(.LastModified) | .LastModified")
     local LAST_SNAPSHOT_MODIFIED=$(date -d "$LAST_SNAPSHOT_MODIFIED_RAW" +'%Y/%m/%d %H:%M:%S')
 
     echo "Snapshots: $SNAPSHOT_COUNT ($TOTAL_BUCKET_SIZE)  Last: $LAST_SNAPSHOT_MODIFIED ($LAST_SNAPSHOT_SIZE)"
   fi
+
 }
 
 function encryptFile() { # 1=INPUT, 2=OUTPUT
@@ -120,6 +123,12 @@ function getBucketFileList() {
   fi
 }
 
+function getBucketFileListSnapshotOnly() {
+  if [ ! -n "$DRY_RUN_FOLDER" ]; then
+    echo "$1" | jq -r '[.Contents[]? | select(.Key | test("^[0-9]+-[0-9]+.[0-9]+.tar.[a-z]+.gpg"))]'
+  fi
+}
+
 function downloadIndexSnar() { # 1=OUTPUT
   local OUTPUT="$1"
 
@@ -146,9 +155,9 @@ function getSnapshotName() {
   if [ -n "$DRY_RUN_FOLDER" ]; then
     SNAP_NUMER=$(ls -1 "$DRY_RUN_FOLDER" | grep -v "$SNAR_FILENAME.gpg" | wc -l)
   else
-    SNAP_NUMBER=$(echo "$BUCKET_FILE_LIST" | jq -r "[.Contents[]? | select(.Key != \"$SNAR_FILENAME.gpg\")] | length")
+    SNAP_NUMBER=$(echo "$BUCKET_FILE_LIST_SNAPSHOT_ONLY" | jq -r "length")
   fi
-  echo "$(date +'%y%m%d-%H%M%S').$SNAP_NUMBER.tar.zst"
+  echo "$(date +'%y%m%d-%H%M%S').$SNAP_NUMBER"
 }
 
 function uploadFile() { # 1=INPUT, 2=STORAGE_CLASS
@@ -231,6 +240,8 @@ export AWS_SECRET_ACCESS_KEY
 export AWS_DEFAULT_REGION
 
 BUCKET_FILE_LIST=$(getBucketFileList)
+BUCKET_FILE_LIST_SNAPSHOT_ONLY=$(getBucketFileListSnapshotOnly "$BUCKET_FILE_LIST")
+
 
 displayBucketInfo
 
@@ -238,16 +249,23 @@ INDEX_SNAR="$TMP_FOLDER/$SNAR_FILENAME"
 downloadIndexSnar "$INDEX_SNAR"
 
 SNAPSHOT_NAME="$(getSnapshotName)"
-SNAPSHOT_OUTPUT="$TMP_FOLDER/$SNAPSHOT_NAME"
+SNAPSHOT_OUTPUT="$TMP_FOLDER/$SNAPSHOT_NAME.tar.zst"
 
 createSnapshot "$CONFIG_PATH" "$INDEX_SNAR" "$SNAPSHOT_OUTPUT"
 
 reviewSnapshot "$SNAPSHOT_OUTPUT"
 
+# update index.snar, not stored as deep_archive as its downloaded on every upload
 ENCRYPTED_INDEX_SNAR="$TMP_FOLDER/$SNAR_FILENAME.gpg"
 encryptFile "$INDEX_SNAR" "$ENCRYPTED_INDEX_SNAR"
 uploadFile "$ENCRYPTED_INDEX_SNAR" "STANDARD"
 
+# create backup of index.snar linked to created tarball
+ARCHIVE_INDEX_SNAR="$TMP_FOLDER/$SNAPSHOT_NAME.snar.gpg"
+cp "$ENCRYPTED_INDEX_SNAR" "$ARCHIVE_INDEX_SNAR"
+uploadFile "$ARCHIVE_INDEX_SNAR" "DEEP_ARCHIVE"
+
+# upload snapshot tarball
 ENCRYPTED_SNAPSHOT="$SNAPSHOT_OUTPUT.gpg"
 encryptFile "$SNAPSHOT_OUTPUT" "$ENCRYPTED_SNAPSHOT"
 uploadFile "$ENCRYPTED_SNAPSHOT" "DEEP_ARCHIVE"
