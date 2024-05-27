@@ -26,6 +26,28 @@ SNAR_FILENAME="index.snar"
 
 # DRY_RUN_FOLDER=/tmpdisk/tar
 
+function check_root() {
+  if [ $UID -ne 0 ]; then
+    echo "run script as root user"
+    exit 1
+  fi
+}
+
+function check_packages() {
+  local REQUIRED_PACKAGES=(jq gpg aws zstd)
+  local PACKAGE_NOT_FOUND=false
+  for PACKAGE in "${REQUIRED_PACKAGES[@]}"; do
+    if ! whereis "$PACKAGE" | grep -q "$PACKAGE: /"; then
+      PACKAGE_NOT_FOUND=true
+      echo "Executable: \"$PACKAGE\" not found"
+    fi
+  done
+  if $PACKAGE_NOT_FOUND; then
+    echo "Exiting due to missing packages"
+    exit 1
+  fi
+}
+
 function check_initialised() { # 1=CONFIG_PATH
   local CONFIG_PATH="$1"
 
@@ -210,7 +232,6 @@ function createSnapshot() { # 1=CONFIG_PATH, 2=INDEX_SNAR, 3=SNAPSHOT_OUTPUT
 
   local transform="--transform=s|^$INJECT_FOLDER|/inject|"
 
-    # --use-compress-program "pixz -9" \
   printf "Creating tarball..."
   tar \
     --use-compress-program "zstd -9 -T0" \
@@ -224,6 +245,9 @@ function createSnapshot() { # 1=CONFIG_PATH, 2=INDEX_SNAR, 3=SNAPSHOT_OUTPUT
   echo " Done"
   rm -r "$INJECT_FOLDER"
 }
+
+check_root
+check_packages
 
 check_initialised "$CONFIG_PATH"
 
