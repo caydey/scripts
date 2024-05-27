@@ -1,6 +1,6 @@
 # tar-aws-snapshot
 
-Create incremental, compressed, encrypted, tar snapshots, automatically uploaded to AWS Glacier Deep Storage
+Create incremental, compressed, encrypted, tar snapshots, automatically uploaded to AWS S3 Glacier Deep Storage
 
 # Configuration
 
