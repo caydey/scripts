@@ -22,7 +22,7 @@
 
 
 CONFIG_PATH="/root/tar-snapshot-config"
-SNAR_FILENAME="index.snar"
+INDEX_SNAR="index.snar"
 
 # DRY_RUN_FOLDER=/tmpdisk/tar
 
@@ -155,15 +155,15 @@ function downloadIndexSnar() { # 1=OUTPUT
   local OUTPUT="$1"
 
   if [ -n "$DRY_RUN_FOLDER" ]; then
-    if [ -f "$DRY_RUN_FOLDER/$SNAR_FILENAME.gpg" ]; then
-      decryptFile "$DRY_RUN_FOLDER/$SNAR_FILENAME.gpg" "$OUTPUT"
+    if [ -f "$DRY_RUN_FOLDER/$INDEX_SNAR.gpg" ]; then
+      decryptFile "$DRY_RUN_FOLDER/$INDEX_SNAR.gpg" "$OUTPUT"
     else
       touch "$OUTPUT"
     fi
   else
-    if echo "$BUCKET_FILE_LIST" | jq -r '.Contents[]? | .Key' | grep -q "$SNAR_FILENAME.gpg"; then
-      local TMP_ENC_INDEX_SNAR="$TMP_FOLDER/$SNAR_FILENAME.gpg"
-      aws s3api get-object --bucket $AWS_BUCKET_NAME --key "$SNAR_FILENAME.gpg" "$TMP_ENC_INDEX_SNAR" > /dev/null
+    if echo "$BUCKET_FILE_LIST" | jq -r '.Contents[]? | .Key' | grep -q "$INDEX_SNAR.gpg"; then
+      local TMP_ENC_INDEX_SNAR="$TMP_FOLDER/$INDEX_SNAR.gpg"
+      aws s3api get-object --bucket $AWS_BUCKET_NAME --key "$INDEX_SNAR.gpg" "$TMP_ENC_INDEX_SNAR" > /dev/null
       decryptFile "$TMP_ENC_INDEX_SNAR" "$OUTPUT"
       rm "$TMP_ENC_INDEX_SNAR"
     else
@@ -175,7 +175,7 @@ function downloadIndexSnar() { # 1=OUTPUT
 function getSnapshotName() {
   local SNAP_NUMBER=0
   if [ -n "$DRY_RUN_FOLDER" ]; then
-    SNAP_NUMER=$(ls -1 "$DRY_RUN_FOLDER" | grep -v "$SNAR_FILENAME.gpg" | wc -l)
+    SNAP_NUMER=$(ls -1 "$DRY_RUN_FOLDER" | grep -v "$INDEX_SNAR.gpg" | wc -l)
   else
     SNAP_NUMBER=$(echo "$BUCKET_FILE_LIST_SNAPSHOT_ONLY" | jq -r "length")
   fi
@@ -223,6 +223,10 @@ function createSnapshot() { # 1=CONFIG_PATH, 2=INDEX_SNAR, 3=SNAPSHOT_OUTPUT
   for injector in $(declare -F | grep "declare -f inject_" | awk '{ print $3 }'); do
     printf "."
     $injector "$INJECT_FOLDER"
+    if [ $? -ne 0 ]; then
+      echo "Injector: \"$injector\" failed, exiting"
+      exit 1
+    fi
   done
   echo " Done"
 
@@ -269,7 +273,7 @@ BUCKET_FILE_LIST_SNAPSHOT_ONLY=$(getBucketFileListSnapshotOnly "$BUCKET_FILE_LIS
 
 displayBucketInfo
 
-INDEX_SNAR="$TMP_FOLDER/$SNAR_FILENAME"
+INDEX_SNAR="$TMP_FOLDER/$INDEX_SNAR"
 downloadIndexSnar "$INDEX_SNAR"
 
 SNAPSHOT_NAME="$(getSnapshotName)"
@@ -280,7 +284,7 @@ createSnapshot "$CONFIG_PATH" "$INDEX_SNAR" "$SNAPSHOT_OUTPUT"
 reviewSnapshot "$SNAPSHOT_OUTPUT"
 
 # update index.snar, not stored as deep_archive as its downloaded on every upload
-ENCRYPTED_INDEX_SNAR="$TMP_FOLDER/$SNAR_FILENAME.gpg"
+ENCRYPTED_INDEX_SNAR="$TMP_FOLDER/$INDEX_SNAR.gpg"
 encryptFile "$INDEX_SNAR" "$ENCRYPTED_INDEX_SNAR"
 uploadFile "$ENCRYPTED_INDEX_SNAR" "STANDARD"
 
