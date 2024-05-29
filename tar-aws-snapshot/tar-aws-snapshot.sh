@@ -22,7 +22,6 @@
 
 
 CONFIG_PATH="/root/tar-snapshot-config"
-INDEX_SNAR="index.snar"
 
 # DRY_RUN_FOLDER=/tmpdisk/tar
 
@@ -155,18 +154,19 @@ function downloadIndexSnar() { # 1=OUTPUT
   local OUTPUT="$1"
 
   if [ -n "$DRY_RUN_FOLDER" ]; then
-    if [ -f "$DRY_RUN_FOLDER/$INDEX_SNAR.gpg" ]; then
-      decryptFile "$DRY_RUN_FOLDER/$INDEX_SNAR.gpg" "$OUTPUT"
+    if [ -f "$DRY_RUN_FOLDER/index.snar.gpg" ]; then
+      decryptFile "$DRY_RUN_FOLDER/index.snar.gpg" "$OUTPUT"
     else
       touch "$OUTPUT"
     fi
   else
-    if echo "$BUCKET_FILE_LIST" | jq -r '.Contents[]? | .Key' | grep -q "$INDEX_SNAR.gpg"; then
-      local TMP_ENC_INDEX_SNAR="$TMP_FOLDER/$INDEX_SNAR.gpg"
-      aws s3api get-object --bucket $AWS_BUCKET_NAME --key "$INDEX_SNAR.gpg" "$TMP_ENC_INDEX_SNAR" > /dev/null
+    if echo "$BUCKET_FILE_LIST" | jq -r '.Contents[]? | .Key' | grep -q "index.snar.gpg"; then
+      local TMP_ENC_INDEX_SNAR="$TMP_FOLDER/index.snar.gpg"
+      aws s3api get-object --bucket $AWS_BUCKET_NAME --key "index.snar.gpg" "$TMP_ENC_INDEX_SNAR" > /dev/null
       decryptFile "$TMP_ENC_INDEX_SNAR" "$OUTPUT"
       rm "$TMP_ENC_INDEX_SNAR"
     else
+      echo "index.snar not found on bucket"
       touch "$OUTPUT"
     fi
   fi
@@ -175,7 +175,7 @@ function downloadIndexSnar() { # 1=OUTPUT
 function getSnapshotName() {
   local SNAP_NUMBER=0
   if [ -n "$DRY_RUN_FOLDER" ]; then
-    SNAP_NUMER=$(ls -1 "$DRY_RUN_FOLDER" | grep -v "$INDEX_SNAR.gpg" | wc -l)
+    SNAP_NUMER=$(ls -1 "$DRY_RUN_FOLDER" | grep -v "index.snar.gpg" | wc -l)
   else
     SNAP_NUMBER=$(echo "$BUCKET_FILE_LIST_SNAPSHOT_ONLY" | jq -r "length")
   fi
@@ -273,7 +273,7 @@ BUCKET_FILE_LIST_SNAPSHOT_ONLY=$(getBucketFileListSnapshotOnly "$BUCKET_FILE_LIS
 
 displayBucketInfo
 
-INDEX_SNAR="$TMP_FOLDER/$INDEX_SNAR"
+INDEX_SNAR="$TMP_FOLDER/index.snar"
 downloadIndexSnar "$INDEX_SNAR"
 
 SNAPSHOT_NAME="$(getSnapshotName)"
@@ -284,7 +284,7 @@ createSnapshot "$CONFIG_PATH" "$INDEX_SNAR" "$SNAPSHOT_OUTPUT"
 reviewSnapshot "$SNAPSHOT_OUTPUT"
 
 # update index.snar, not stored as deep_archive as its downloaded on every upload
-ENCRYPTED_INDEX_SNAR="$TMP_FOLDER/$INDEX_SNAR.gpg"
+ENCRYPTED_INDEX_SNAR="$TMP_FOLDER/index.snar.gpg"
 encryptFile "$INDEX_SNAR" "$ENCRYPTED_INDEX_SNAR"
 uploadFile "$ENCRYPTED_INDEX_SNAR" "STANDARD"
 
