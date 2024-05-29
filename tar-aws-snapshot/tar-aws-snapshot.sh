@@ -96,6 +96,7 @@ function reviewSnapshot() { # 1=SNAPSHOT_OUTPUT
 
 function displayBucketInfo() {
   if [ -n "$DRY_RUN_FOLDER" ]; then
+    echo "Using $DRY_RUN_FOLDER"
     return
   fi
 
@@ -195,7 +196,7 @@ function populateMasterIncludeFile() { # 1=MASTER_INCLUDE_FILE, 2=CONFIG_PATH
 function getSnapshotName() {
   local SNAP_NUMBER=0
   if [ -n "$DRY_RUN_FOLDER" ]; then
-    SNAP_NUMER=$(ls -1 "$DRY_RUN_FOLDER" | grep -v "index.snar.gpg" | wc -l)
+    SNAP_NUMBER=$(ls -1 "$DRY_RUN_FOLDER" | grep -P "\d+-\d+.\d+.tar.\w+" | wc -l)
   else
     SNAP_NUMBER=$(echo "$BUCKET_FILE_LIST_SNAPSHOT_ONLY" | jq -r "length")
   fi
