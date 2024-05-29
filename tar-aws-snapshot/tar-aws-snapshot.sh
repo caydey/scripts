@@ -217,7 +217,7 @@ function uploadFile() { # 1=INPUT, 2=STORAGE_CLASS
   fi
   local FILE_KEY=$(basename "$INPUT")
 
-  printf "Uploading $FILE_KEY..."
+  printf "Uploading  $FILE_KEY..."
   if [ -n "$DRY_RUN_FOLDER" ]; then
     cp "$INPUT" "$DRY_RUN_FOLDER/$FILE_KEY"
   else
@@ -239,10 +239,7 @@ function createSnapshot() { # 1=CONFIG_PATH, 2=INDEX_SNAR, 3=SNAPSHOT_OUTPUT
   local INDEX_SNAR="$2"
   local SNAPSHOT_OUTPUT="$3"
 
-  local INJECT_FOLDER="$TMP_FOLDER/inject"
-  mkdir "$INJECT_FOLDER"
-
-  ## Run injectors (files for tar --transform)
+  ## Run injectors
   printf "Running injectors"
   source "$CONFIG_PATH/injectors.sh"
   for injector in $(declare -F | grep "declare -f inject_" | awk '{ print $3 }'); do
@@ -288,7 +285,12 @@ check_initialised "$CONFIG_PATH"
 
 # temp folder
 TMP_FOLDER="$(mktemp -d)"
-function cleanup { rm -r "$TMP_FOLDER"; }
+INJECT_FOLDER="/tar-aws-snapshot-$(uuidgen)" # at root so it cant be excluded
+mkdir "$INJECT_FOLDER"
+function cleanup {
+  rm -r "$TMP_FOLDER"
+  rm -rf "$INJECT_FOLDER" # incase of error ensure inject folder is deleted
+}
 trap cleanup EXIT
 
 . $CONFIG_PATH/secrets.config # load secrets file
