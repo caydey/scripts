@@ -23,7 +23,7 @@
 
 CONFIG_PATH="/root/tar-snapshot-config"
 
-# DRY_RUN_FOLDER=/tmpdisk/tar
+# DRY_RUN_FOLDER=/tmpdisk/tarsnap
 
 function check_root() {
   if [ $UID -ne 0 ]; then
@@ -114,7 +114,6 @@ function displayBucketInfo() {
 
     echo "Snapshots: $SNAPSHOT_COUNT ($TOTAL_BUCKET_SIZE)  Last: $LAST_SNAPSHOT_MODIFIED ($LAST_SNAPSHOT_SIZE)"
   fi
-
 }
 
 function encryptFile() { # 1=INPUT, 2=OUTPUT
@@ -155,19 +154,24 @@ function downloadIndexSnar() { # 1=OUTPUT
   local OUTPUT="$1"
 
   if [ -n "$DRY_RUN_FOLDER" ]; then
-    if [ -f "$DRY_RUN_FOLDER/index.snar.gpg" ]; then
-      decryptFile "$DRY_RUN_FOLDER/index.snar.gpg" "$OUTPUT"
+    if [ -f "$DRY_RUN_FOLDER/index.snar.zst.gpg" ]; then
+      local TMP_CMP_INDEX_SNAR="$TMP_FOLDER/index.snar.zst"
+      decryptFile "$DRY_RUN_FOLDER/index.snar.zst.gpg" "$TMP_CMP_INDEX_SNAR"
+      zstd --decompress  --quiet "$TMP_CMP_INDEX_SNAR" -o "$OUTPUT"
+      rm "$TMP_CMP_INDEX_SNAR"
     else
       touch "$OUTPUT"
     fi
   else
-    if echo "$BUCKET_FILE_LIST" | jq -r '.Contents[]? | .Key' | grep -q "index.snar.gpg"; then
-      local TMP_ENC_INDEX_SNAR="$TMP_FOLDER/index.snar.gpg"
-      aws s3api get-object --bucket $AWS_BUCKET_NAME --key "index.snar.gpg" "$TMP_ENC_INDEX_SNAR" > /dev/null
-      decryptFile "$TMP_ENC_INDEX_SNAR" "$OUTPUT"
-      rm "$TMP_ENC_INDEX_SNAR"
+    if echo "$BUCKET_FILE_LIST" | jq -r '.Contents[]? | .Key' | grep -q "index.snar.zst.gpg"; then
+      local TMP_ENC_INDEX_SNAR="$TMP_FOLDER/index.snar.zst.gpg"
+      local TMP_CMP_INDEX_SNAR="$TMP_FOLDER/index.snar.zst"
+      aws s3api get-object --bucket $AWS_BUCKET_NAME --key "index.snar.zst.gpg" "$TMP_ENC_INDEX_SNAR" > /dev/null
+      decryptFile "$TMP_ENC_INDEX_SNAR" "$TMP_CMP_INDEX_SNAR"
+      zstd --decompress --quiet "$TMP_CMP_INDEX_SNAR" "$OUTPUT"
+      rm "$TMP_ENC_INDEX_SNAR" "$TMP_CMP_INDEX_SNAR"
     else
-      echo "index.snar not found on bucket"
+      echo "index.snar.zst.gpg not found on bucket"
       touch "$OUTPUT"
     fi
   fi
@@ -311,12 +315,15 @@ createSnapshot "$CONFIG_PATH" "$INDEX_SNAR" "$SNAPSHOT_OUTPUT"
 reviewSnapshot "$SNAPSHOT_OUTPUT"
 
 # update index.snar, not stored as deep_archive as its downloaded on every upload
-ENCRYPTED_INDEX_SNAR="$TMP_FOLDER/index.snar.gpg"
-encryptFile "$INDEX_SNAR" "$ENCRYPTED_INDEX_SNAR"
+COMPRESSED_INDEX_SNAR="$TMP_FOLDER/index.snar.zst"
+zstd -9 -T0 --quiet "$INDEX_SNAR" "$COMPRESSED_INDEX_SNAR"
+rm "$INDEX_SNAR"
+# encrypt index.snar
+ENCRYPTED_INDEX_SNAR="$TMP_FOLDER/index.snar.zst.gpg"
+encryptFile "$COMPRESSED_INDEX_SNAR" "$ENCRYPTED_INDEX_SNAR"
 uploadFile "$ENCRYPTED_INDEX_SNAR" "STANDARD"
-
 # create backup of index.snar linked to created tarball
-ARCHIVE_INDEX_SNAR="$TMP_FOLDER/$SNAPSHOT_NAME.snar.gpg"
+ARCHIVE_INDEX_SNAR="$TMP_FOLDER/$SNAPSHOT_NAME.snar.zst.gpg"
 cp "$ENCRYPTED_INDEX_SNAR" "$ARCHIVE_INDEX_SNAR"
 uploadFile "$ARCHIVE_INDEX_SNAR" "DEEP_ARCHIVE"
 
