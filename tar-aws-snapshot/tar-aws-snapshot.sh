@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Copyright (c) 2024 caydey
-
+# 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
@@ -231,7 +231,7 @@ function uploadFile() { # 1=INPUT, 2=STORAGE_CLASS
       --key "$FILE_KEY" \
       --tagging "$TAG"
   fi
-  echo "Done"
+  echo " Done"
 }
 
 function createSnapshot() { # 1=CONFIG_PATH, 2=INDEX_SNAR, 3=SNAPSHOT_OUTPUT 
