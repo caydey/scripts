@@ -172,6 +172,26 @@ function downloadIndexSnar() { # 1=OUTPUT
   fi
 }
 
+function populateMasterExcludeFile() { # 1=MASTER_EXCLUDE_FILE, 2=CONFIG_PATH
+  MASTER_EXCLUDE_FILE="$1"
+  CONFIG_PATH="$2"
+  touch "$MASTER_EXCLUDE_FILE"
+  for excludeFile in "$CONFIG_PATH"/exclude*.list; do
+    cat "$excludeFile" >> "$MASTER_EXCLUDE_FILE"
+    echo >> "$MASTER_EXCLUDE_FILE"
+  done
+}
+
+function populateMasterIncludeFile() { # 1=MASTER_INCLUDE_FILE, 2=CONFIG_PATH
+  MASTER_INCLUDE_FILE="$1"
+  CONFIG_PATH="$2"
+  touch "$MASTER_INCLUDE_FILE"
+  for includeFile in "$CONFIG_PATH"/include*.list; do
+    cat "$includeFile" >> "$MASTER_INCLUDE_FILE"
+    echo >> "$MASTER_INCLUDE_FILE"
+  done
+}
+
 function getSnapshotName() {
   local SNAP_NUMBER=0
   if [ -n "$DRY_RUN_FOLDER" ]; then
@@ -230,9 +250,15 @@ function createSnapshot() { # 1=CONFIG_PATH, 2=INDEX_SNAR, 3=SNAPSHOT_OUTPUT
   done
   echo " Done"
 
-  cat "$CONFIG_PATH"/exclude*.list 2> /dev/null > "$INJECT_FOLDER/exclude.list"
-  echo "$INJECT_FOLDER" > "$INJECT_FOLDER/include.list"
-  cat "$CONFIG_PATH/include.list" >> "$INJECT_FOLDER/include.list"
+  mkdir "$INJECT_FOLDER/config"
+  cp "$CONFIG_PATH"/exclude*.list "$CONFIG_PATH"/include*.list "$INJECT_FOLDER/config/"
+
+  MASTER_EXCLUDE_FILE="$TMP_FOLDER/master-exclude.list"
+  populateMasterExcludeFile "$MASTER_EXCLUDE_FILE" "$CONFIG_PATH"
+
+  MASTER_INCLUDE_FILE="$TMP_FOLDER/master-include.list"
+  populateMasterIncludeFile "$MASTER_INCLUDE_FILE" "$CONFIG_PATH"
+  printf "\n${INJECT_FOLDER}" >> $MASTER_INCLUDE_FILE
 
   local transform="--transform=s|^$INJECT_FOLDER|/inject|"
 
@@ -243,9 +269,9 @@ function createSnapshot() { # 1=CONFIG_PATH, 2=INDEX_SNAR, 3=SNAPSHOT_OUTPUT
     --absolute-names \
     --create --file="$SNAPSHOT_OUTPUT" \
     --listed-incremental="$INDEX_SNAR" \
-    --wildcards-match-slash --exclude-from="$INJECT_FOLDER/exclude.list" \
+    --wildcards-match-slash --exclude-from="$MASTER_EXCLUDE_FILE" \
     --transform="s|^$INJECT_FOLDER|/inject|" \
-    --files-from="$INJECT_FOLDER/include.list" 
+    --files-from="$MASTER_INCLUDE_FILE" 
   echo " Done"
   rm -r "$INJECT_FOLDER"
 }

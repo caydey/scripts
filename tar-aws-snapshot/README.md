@@ -21,7 +21,7 @@ Functions must start with `injector_` and are called with the parameter "$1" whi
 
 ## exclude.list
 
-Contains a list of files to exclude, asteriks `*` match backslashes `/`. Files inside the configuration directory that match `exclude*.list` are also included. Ensure that the file ends with a blank line.
+Contains a list of files to exclude, asterisks `*` match backslashes `/`. Files inside the configuration directory that match `exclude*.list` are also included.
 
 ## include.list
 
