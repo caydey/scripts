@@ -157,7 +157,7 @@ function downloadIndexSnar() { # 1=OUTPUT
     if [ -f "$DRY_RUN_FOLDER/index.snar.zst.gpg" ]; then
       local TMP_CMP_INDEX_SNAR="$TMP_FOLDER/index.snar.zst"
       decryptFile "$DRY_RUN_FOLDER/index.snar.zst.gpg" "$TMP_CMP_INDEX_SNAR"
-      zstd --decompress  --quiet "$TMP_CMP_INDEX_SNAR" -o "$OUTPUT"
+      zstd --decompress --quiet "$TMP_CMP_INDEX_SNAR" -o "$OUTPUT"
       rm "$TMP_CMP_INDEX_SNAR"
     else
       touch "$OUTPUT"
@@ -168,7 +168,7 @@ function downloadIndexSnar() { # 1=OUTPUT
       local TMP_CMP_INDEX_SNAR="$TMP_FOLDER/index.snar.zst"
       aws s3api get-object --bucket $AWS_BUCKET_NAME --key "index.snar.zst.gpg" "$TMP_ENC_INDEX_SNAR" > /dev/null
       decryptFile "$TMP_ENC_INDEX_SNAR" "$TMP_CMP_INDEX_SNAR"
-      zstd --decompress --quiet "$TMP_CMP_INDEX_SNAR" "$OUTPUT"
+      zstd --decompress --quiet "$TMP_CMP_INDEX_SNAR" -o "$OUTPUT"
       rm "$TMP_ENC_INDEX_SNAR" "$TMP_CMP_INDEX_SNAR"
     else
       echo "index.snar.zst.gpg not found on bucket"
